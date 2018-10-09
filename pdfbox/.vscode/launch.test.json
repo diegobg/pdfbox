@@ -1,0 +1,30 @@
+{
+    "run": {
+        "default": "",
+        "items": [
+            {
+                "name": "pdfbox",
+                "projectName": "pdfbox",
+                "workingDirectory": "/Users/diego/Projects/pdfbox/pdfbox",
+                "args": [],
+                "vmargs": [],
+                "env": {},
+                "preLaunchTask": ""
+            }
+        ]
+    },
+    "debug": {
+        "default": "",
+        "items": [
+            {
+                "name": "pdfbox",
+                "projectName": "pdfbox",
+                "workingDirectory": "/Users/diego/Projects/pdfbox/pdfbox",
+                "args": [],
+                "vmargs": [],
+                "env": {},
+                "preLaunchTask": ""
+            }
+        ]
+    }
+}

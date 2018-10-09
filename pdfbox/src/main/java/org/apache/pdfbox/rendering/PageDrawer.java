@@ -69,6 +69,8 @@ import org.apache.pdfbox.pdmodel.graphics.blend.BlendMode;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceN;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 import org.apache.pdfbox.pdmodel.graphics.color.PDICCBased;
 import org.apache.pdfbox.pdmodel.graphics.color.PDPattern;
 import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroup;
@@ -136,6 +138,8 @@ public class PageDrawer extends PDFGraphicsStreamEngine
     
     private final Stack<TransparencyGroup> transparencyGroupStack = new Stack<>();
 
+    private final PDColor white = new PDColor(new float[] { 1, 1, 1 }, PDDeviceRGB.INSTANCE);
+
     /**
     * Default annotations filter, returns all annotations
     */
@@ -148,6 +152,8 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         }
     };
 
+    private final PDColorSpace colorSpace;
+
     /**
      * Constructor.
      *
@@ -159,6 +165,7 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         super(parameters.getPage());
         this.renderer = parameters.getRenderer();
         this.subsamplingAllowed = parameters.isSubsamplingAllowed();
+        this.colorSpace = parameters.getColorSpace();
     }
 
     /**
@@ -858,8 +865,23 @@ public class PageDrawer extends PDFGraphicsStreamEngine
     @Override
     public void drawImage(PDImage pdImage) throws IOException
     {
+        if (colorSpace != null) {
+            PDColorSpace imageColorSpace = pdImage.getColorSpace();
+
+            if (imageColorSpace instanceof PDDeviceN) {
+                PDDeviceN pdDeviceN = (PDDeviceN)imageColorSpace;
+
+                if (pdDeviceN.getAlternateColorSpace() != colorSpace) {
+                    return;
+                }
+            }
+            else if (imageColorSpace != colorSpace) {
+                return;
+            }
+        }
+
         Matrix ctm = getGraphicsState().getCurrentTransformationMatrix();
-        AffineTransform at = ctm.createAffineTransform();
+        AffineTransform at = ctm.createAffineTransform();        
 
         if (!pdImage.getInterpolate())
         {
@@ -1247,6 +1269,27 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         }
 
         graphics.setTransform(prev);
+    }
+
+    @Override
+    public PDGraphicsState getGraphicsState() {
+        PDGraphicsState graphicsState = super.getGraphicsState();
+    
+        if (colorSpace != null) {
+            PDColor strokingColor = graphicsState.getStrokingColor();
+
+			if (strokingColor != white && strokingColor.getColorSpace() != colorSpace) {
+                graphicsState.setStrokingColor(white);
+            }
+
+            PDColor nonStrokingColor = graphicsState.getNonStrokingColor();
+
+            if (nonStrokingColor != white && nonStrokingColor.getColorSpace() != colorSpace) {
+                graphicsState.setNonStrokingColor(white);
+            }
+        }
+
+        return graphicsState;        
     }
 
     /**

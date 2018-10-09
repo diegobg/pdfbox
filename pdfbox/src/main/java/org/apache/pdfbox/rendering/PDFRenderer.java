@@ -29,6 +29,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.graphics.blend.BlendMode;
+import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
 import org.apache.pdfbox.pdmodel.interactive.annotation.AnnotationFilter;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
@@ -141,6 +142,18 @@ public class PDFRenderer
     }
 
     /**
+     * Returns the given page as an RGB image at 72 DPI
+     * @param pageIndex the zero-based index of the page to be converted.
+     * @param colorSpace the color space to render
+     * @return the rendered page image
+     * @throws IOException if the PDF cannot be read
+     */
+    public BufferedImage renderImage(int pageIndex, PDColorSpace colorSpace) throws IOException
+    {
+        return renderImage(pageIndex, 1, colorSpace);
+    }    
+
+    /**
      * Returns the given page as an RGB image at the given scale.
      * A scale of 1 will render at 72 DPI.
      * @param pageIndex the zero-based index of the page to be converted
@@ -150,8 +163,22 @@ public class PDFRenderer
      */
     public BufferedImage renderImage(int pageIndex, float scale) throws IOException
     {
-        return renderImage(pageIndex, scale, ImageType.RGB);
+        return renderImage(pageIndex, scale, ImageType.RGB, null);
     }
+
+    /**
+     * Returns the given page as an RGB image at the given scale.
+     * A scale of 1 will render at 72 DPI.
+     * @param pageIndex the zero-based index of the page to be converted
+     * @param scale the scaling factor, where 1 = 72 DPI
+     * @param colorSpace the color space to render
+     * @return the rendered page image
+     * @throws IOException if the PDF cannot be read
+     */
+    public BufferedImage renderImage(int pageIndex, float scale, PDColorSpace colorSpace) throws IOException
+    {
+        return renderImage(pageIndex, scale, ImageType.RGB, colorSpace);
+    }    
 
     /**
      * Returns the given page as an RGB image at the given DPI.
@@ -162,7 +189,7 @@ public class PDFRenderer
      */
     public BufferedImage renderImageWithDPI(int pageIndex, float dpi) throws IOException
     {
-        return renderImage(pageIndex, dpi / 72f, ImageType.RGB);
+        return renderImage(pageIndex, dpi / 72f, ImageType.RGB, null);
     }
 
     /**
@@ -176,7 +203,7 @@ public class PDFRenderer
     public BufferedImage renderImageWithDPI(int pageIndex, float dpi, ImageType imageType)
             throws IOException
     {
-        return renderImage(pageIndex, dpi / 72f, imageType);
+        return renderImage(pageIndex, dpi / 72f, imageType, null);
     }
 
     /**
@@ -187,7 +214,7 @@ public class PDFRenderer
      * @return the rendered page image
      * @throws IOException if the PDF cannot be read
      */
-    public BufferedImage renderImage(int pageIndex, float scale, ImageType imageType)
+    public BufferedImage renderImage(int pageIndex, float scale, ImageType imageType, PDColorSpace colorSpace)
             throws IOException
     {
         PDPage page = document.getPage(pageIndex);
@@ -240,7 +267,7 @@ public class PDFRenderer
         transform(g, page, scale, scale);
 
         // the end-user may provide a custom PageDrawer
-        PageDrawerParameters parameters = new PageDrawerParameters(this, page, subsamplingAllowed);
+        PageDrawerParameters parameters = new PageDrawerParameters(this, page, subsamplingAllowed, colorSpace);
         PageDrawer drawer = createPageDrawer(parameters);
         drawer.drawPage(g, page.getCropBox());       
         
@@ -283,7 +310,7 @@ public class PDFRenderer
     public void renderPageToGraphics(int pageIndex, Graphics2D graphics, float scale)
             throws IOException
     {
-        renderPageToGraphics(pageIndex, graphics, scale, scale);
+        renderPageToGraphics(pageIndex, graphics, scale, scale, null);
     }
 
     /**
@@ -295,7 +322,7 @@ public class PDFRenderer
      * @param scaleY the scale to draw the page at for the y-axis
      * @throws IOException if the PDF cannot be read
      */
-    public void renderPageToGraphics(int pageIndex, Graphics2D graphics, float scaleX, float scaleY)
+    public void renderPageToGraphics(int pageIndex, Graphics2D graphics, float scaleX, float scaleY, PDColorSpace colorSpace)
             throws IOException
     {
         PDPage page = document.getPage(pageIndex);
@@ -307,7 +334,7 @@ public class PDFRenderer
         graphics.clearRect(0, 0, (int) cropBox.getWidth(), (int) cropBox.getHeight());
 
         // the end-user may provide a custom PageDrawer
-        PageDrawerParameters parameters = new PageDrawerParameters(this, page, subsamplingAllowed);
+        PageDrawerParameters parameters = new PageDrawerParameters(this, page, subsamplingAllowed, colorSpace);
         PageDrawer drawer = createPageDrawer(parameters);
         drawer.drawPage(graphics, cropBox);
     }
