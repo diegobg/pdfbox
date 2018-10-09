@@ -72,6 +72,7 @@ import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceN;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 import org.apache.pdfbox.pdmodel.graphics.color.PDICCBased;
+import org.apache.pdfbox.pdmodel.graphics.color.PDIndexed;
 import org.apache.pdfbox.pdmodel.graphics.color.PDPattern;
 import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroup;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImage;
@@ -872,6 +873,13 @@ public class PageDrawer extends PDFGraphicsStreamEngine
                 PDDeviceN pdDeviceN = (PDDeviceN)imageColorSpace;
 
                 if (pdDeviceN.getAlternateColorSpace() != colorSpace) {
+                    return;
+                }
+            }
+            else if (imageColorSpace instanceof PDIndexed) {
+                PDIndexed pdIndexed = (PDIndexed)imageColorSpace;
+
+                if (pdIndexed.getBaseColorSpace() != colorSpace) {
                     return;
                 }
             }
