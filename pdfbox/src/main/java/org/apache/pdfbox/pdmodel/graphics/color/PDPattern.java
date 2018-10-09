@@ -96,7 +96,7 @@ public final class PDPattern extends PDSpecialColorSpace
     }
 
     @Override
-    public BufferedImage toRGBImage(WritableRaster raster) throws IOException
+    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
     {
         throw new UnsupportedOperationException();
     }

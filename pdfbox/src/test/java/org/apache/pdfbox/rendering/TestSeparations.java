@@ -61,6 +61,11 @@ public class TestSeparations {
 
             if (colorSpace instanceof PDSeparation) {
                 PDSeparation separation = (PDSeparation)colorSpace;
+
+                if (separation.getColorantName().equals("All")) {
+                    continue;
+                }
+
                 image = renderer.renderImage(0, colorSpace);
        
                 writeImage(image, OUTPUT_DIR + "/" + filename + "." + separation.getColorantName());

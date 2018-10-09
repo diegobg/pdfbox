@@ -141,16 +141,16 @@ public class PDDeviceCMYK extends PDDeviceColorSpace
     }
 
     @Override
-    public BufferedImage toRGBImage(WritableRaster raster) throws IOException
+    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
     {
         init();
-        return toRGBImageAWT(raster, awtColorSpace);
+        return toRGBImageAWT(raster, awtColorSpace, targetColorSpace);
     }
 
     @Override
-    protected BufferedImage toRGBImageAWT(WritableRaster raster, ColorSpace colorSpace)
+    protected BufferedImage toRGBImageAWT(WritableRaster raster, ColorSpace colorSpace, PDColorSpace targetColorSpace)
     {
-        if (usePureJavaCMYKConversion)
+        if (true || usePureJavaCMYKConversion)
         {
             BufferedImage dest = new BufferedImage(raster.getWidth(), raster.getHeight(),
                     BufferedImage.TYPE_INT_RGB);
@@ -167,6 +167,12 @@ public class PDDeviceCMYK extends PDDeviceColorSpace
             {
                 for (int y = startY; y < height + startY; y++)
                 {
+                    if (targetColorSpace != null && targetColorSpace != this) {
+                        destRaster.setPixel(x, y, new int[] {255, 255, 255});
+
+                        continue;
+                    }
+                    
                     raster.getPixel(x, y, srcValues);
                     // check if the last value can be reused
                     if (!Arrays.equals(lastValues, srcValues))
@@ -190,7 +196,7 @@ public class PDDeviceCMYK extends PDDeviceColorSpace
         }
         else
         {
-            return super.toRGBImageAWT(raster, colorSpace);
+            return super.toRGBImageAWT(raster, colorSpace, targetColorSpace);
         }
     }
 }

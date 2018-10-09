@@ -171,7 +171,7 @@ public class PDDeviceN extends PDSpecialColorSpace
     }
 
     @Override
-    public BufferedImage toRGBImage(WritableRaster raster) throws IOException
+    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
     {
         if (attributes != null)
         {
@@ -249,7 +249,7 @@ public class PDDeviceN extends PDSpecialColorSpace
             }
 
             // convert single-component raster to RGB
-            BufferedImage rgbComponentImage = componentColorSpace.toRGBImage(componentRaster);
+            BufferedImage rgbComponentImage = componentColorSpace.toRGBImage(componentRaster, null);
             WritableRaster rgbComponentRaster = rgbComponentImage.getRaster();
 
             // combine the RGB component with the RGB composite raster

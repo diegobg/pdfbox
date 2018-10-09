@@ -80,9 +80,9 @@ public final class PDJPXColorSpace extends PDColorSpace
     }
 
     @Override
-    public BufferedImage toRGBImage(WritableRaster raster) throws IOException
+    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
     {
-        return toRGBImageAWT(raster, awtColorSpace);
+        return toRGBImageAWT(raster, awtColorSpace, targetColorSpace);
     }
 
     @Override
