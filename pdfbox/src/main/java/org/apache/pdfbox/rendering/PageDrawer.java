@@ -68,6 +68,7 @@ import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.blend.BlendMode;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceCMYK;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceN;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
@@ -139,8 +140,6 @@ public class PageDrawer extends PDFGraphicsStreamEngine
     private final TilingPaintFactory tilingPaintFactory = new TilingPaintFactory(this);
     
     private final Stack<TransparencyGroup> transparencyGroupStack = new Stack<>();
-
-    private final PDColor white = new PDColor(new float[] { 1, 1, 1 }, PDDeviceRGB.INSTANCE);
 
     /**
     * Default annotations filter, returns all annotations
@@ -469,19 +468,23 @@ public class PageDrawer extends PDFGraphicsStreamEngine
 
             if (renderingMode.isFill())
             {
-                graphics.setComposite(state.getNonStrokingJavaComposite());
-                graphics.setPaint(getNonStrokingPaint());
-                setClip();
-                graphics.fill(glyph);
+                if (shouldDraw(state.getNonStrokingColor())) {
+                    graphics.setComposite(state.getNonStrokingJavaComposite());
+                    graphics.setPaint(getNonStrokingPaint());
+                    setClip();
+                    graphics.fill(glyph);
+                }
             }
 
             if (renderingMode.isStroke())
             {
-                graphics.setComposite(state.getStrokingJavaComposite());
-                graphics.setPaint(getStrokingPaint());
-                graphics.setStroke(getStroke());
-                setClip();
-                graphics.draw(glyph);
+                if (shouldDraw(state.getStrokingColor())) {
+                    graphics.setComposite(state.getStrokingJavaComposite());
+                    graphics.setPaint(getStrokingPaint());
+                    graphics.setStroke(getStroke());
+                    setClip();
+                    graphics.draw(glyph);
+                }
             }
 
             if (renderingMode.isClip())
@@ -665,30 +668,35 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         graphics.setPaint(getStrokingPaint());
         graphics.setStroke(getStroke());
         setClip();
-        //TODO bbox of shading pattern should be used here? (see fillPath)
-        graphics.draw(linePath);
+
+        if (shouldDraw(getGraphicsState().getStrokingColor())) {            
+            //TODO bbox of shading pattern should be used here? (see fillPath)       
+            graphics.draw(linePath);            
+        }
+
         linePath.reset();
     }
 
     @Override
     public void fillPath(int windingRule) throws IOException
     {
-        graphics.setComposite(getGraphicsState().getNonStrokingJavaComposite());
-        graphics.setPaint(getNonStrokingPaint());
-        setClip();
-        linePath.setWindingRule(windingRule);
-
         // disable anti-aliasing for rectangular paths, this is a workaround to avoid small stripes
         // which occur when solid fills are used to simulate piecewise gradients, see PDFBOX-2302
         // note that we ignore paths with a width/height under 1 as these are fills used as strokes,
         // see PDFBOX-1658 for an example
         Rectangle2D bounds = linePath.getBounds2D();
         boolean noAntiAlias = isRectangular(linePath) && bounds.getWidth() > 1 &&
-                                                         bounds.getHeight() > 1;
+                                                        bounds.getHeight() > 1;
+
+        graphics.setComposite(getGraphicsState().getNonStrokingJavaComposite());
+        graphics.setPaint(getNonStrokingPaint());
+        setClip();
+        linePath.setWindingRule(windingRule);
+
         if (noAntiAlias)
         {
             graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                                      RenderingHints.VALUE_ANTIALIAS_OFF);
+                                    RenderingHints.VALUE_ANTIALIAS_OFF);
         }
 
         if (!(graphics.getPaint() instanceof Color))
@@ -697,11 +705,16 @@ public class PageDrawer extends PDFGraphicsStreamEngine
             Area area = new Area(linePath);
             area.intersect(new Area(graphics.getClip()));
             intersectShadingBBox(getGraphicsState().getNonStrokingColor(), area);
-            graphics.fill(area);
+
+            if (shouldDraw(getGraphicsState().getNonStrokingColor())) {
+                graphics.fill(area);
+            }
         }
         else
         {
-            graphics.fill(linePath);
+            if (shouldDraw(getGraphicsState().getNonStrokingColor())) {
+                graphics.fill(linePath);
+            }
         }
         
         linePath.reset();
@@ -1258,43 +1271,6 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         graphics.setTransform(prev);
     }
 
-    @Override
-    public PDGraphicsState getGraphicsState() {
-        PDGraphicsState graphicsState = super.getGraphicsState();
-    
-        if (colorSpace != null) {
-            PDColor sColor = graphicsState.getStrokingColor();
-            PDColorSpace sColorSpace = sColor.getColorSpace();
-            
-			if (sColor != white && sColorSpace != colorSpace && !isRegistrationColor(sColor)) {
-                graphicsState.setStrokingColor(white);
-            }
-
-            PDColor nsColor = graphicsState.getNonStrokingColor();
-            PDColorSpace nsColorSpace = nsColor.getColorSpace();            
-
-            if (nsColor != white && nsColorSpace != colorSpace && !isRegistrationColor(nsColor)) {
-                graphicsState.setNonStrokingColor(white);
-            }
-        }
-
-        return graphicsState;        
-    }
-
-    private boolean isRegistrationColor(PDColor color) {
-        PDColorSpace colorSpace = color.getColorSpace();
-
-        if (colorSpace instanceof PDSeparation) {
-            PDSeparation separation = (PDSeparation)colorSpace;
-
-            if (separation.getColorantName().equals("All")) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /**
      * Transparency group.
      **/
@@ -1602,5 +1578,59 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         }
 
         return false;
+    }
+
+    private boolean shouldDraw(PDColor color) {
+        PDColorSpace colorSpace = color.getColorSpace();
+        float[] components = color.getComponents();
+
+        if (this.colorSpace != null && this.colorSpace != colorSpace) {
+            if (colorSpace instanceof PDSeparation) {
+                PDSeparation separation = (PDSeparation)colorSpace;
+
+                if (separation.getColorantName().equals("All")) {
+                    return true;
+                }
+            }
+
+            if (colorSpace instanceof PDDeviceCMYK) {
+                for (float c : components) {
+                    if (c > 0) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            if (colorSpace instanceof PDDeviceN) {
+                PDDeviceN deviceN = (PDDeviceN)colorSpace;
+            }
+
+            if (colorSpace instanceof PDIndexed) {
+                PDIndexed indexed = (PDIndexed)colorSpace;
+                PDColorSpace base = indexed.getBaseColorSpace();
+            }
+
+            if (colorSpace instanceof PDDeviceGray) {
+                if (components[0] == 0) {
+                    return true;
+                }
+            }
+
+            if (colorSpace instanceof PDDeviceRGB) {
+                for (float c : components) {
+                    if (c < 1) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            
+            return false;
+        }
+
+        return true;        
     }
 }
