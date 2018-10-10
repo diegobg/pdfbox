@@ -82,8 +82,13 @@ public final class PDDeviceGray extends PDDeviceColorSpace
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
-            {
+            {                
                 raster.getPixel(x, y, gray);
+
+                if (targetColorSpace != null && targetColorSpace != this) {
+                    gray[0] = 255;
+                }
+
                 rgb[0] = gray[0];
                 rgb[1] = gray[0];
                 rgb[2] = gray[0];

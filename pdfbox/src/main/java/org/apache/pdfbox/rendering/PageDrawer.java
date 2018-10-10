@@ -68,12 +68,9 @@ import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.blend.BlendMode;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
-import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceCMYK;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray;
-import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceN;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 import org.apache.pdfbox.pdmodel.graphics.color.PDICCBased;
-import org.apache.pdfbox.pdmodel.graphics.color.PDIndexed;
 import org.apache.pdfbox.pdmodel.graphics.color.PDPattern;
 import org.apache.pdfbox.pdmodel.graphics.color.PDSeparation;
 import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroup;
@@ -469,6 +466,8 @@ public class PageDrawer extends PDFGraphicsStreamEngine
             if (renderingMode.isFill())
             {
                 if (shouldDraw(state.getNonStrokingColor())) {
+                    CheckColors();
+
                     graphics.setComposite(state.getNonStrokingJavaComposite());
                     graphics.setPaint(getNonStrokingPaint());
                     setClip();
@@ -479,6 +478,8 @@ public class PageDrawer extends PDFGraphicsStreamEngine
             if (renderingMode.isStroke())
             {
                 if (shouldDraw(state.getStrokingColor())) {
+                    CheckColors();
+
                     graphics.setComposite(state.getStrokingJavaComposite());
                     graphics.setPaint(getStrokingPaint());
                     graphics.setStroke(getStroke());
@@ -664,6 +665,8 @@ public class PageDrawer extends PDFGraphicsStreamEngine
     @Override
     public void strokePath() throws IOException
     {
+        CheckColors();
+
         graphics.setComposite(getGraphicsState().getStrokingJavaComposite());
         graphics.setPaint(getStrokingPaint());
         graphics.setStroke(getStroke());
@@ -687,6 +690,8 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         Rectangle2D bounds = linePath.getBounds2D();
         boolean noAntiAlias = isRectangular(linePath) && bounds.getWidth() > 1 &&
                                                         bounds.getHeight() > 1;
+
+        CheckColors();
 
         graphics.setComposite(getGraphicsState().getNonStrokingJavaComposite());
         graphics.setPaint(getNonStrokingPaint());
@@ -1580,57 +1585,51 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         return false;
     }
 
-    private boolean shouldDraw(PDColor color) {
-        PDColorSpace colorSpace = color.getColorSpace();
-        float[] components = color.getComponents();
+    private void CheckColors() {
+        if (colorSpace == null) {
+            return;
+        }    
 
-        if (this.colorSpace != null && this.colorSpace != colorSpace) {
-            if (colorSpace instanceof PDSeparation) {
-                PDSeparation separation = (PDSeparation)colorSpace;
+        PDColor white = new PDColor(new float[] { 255, 255, 255}, PDDeviceRGB.INSTANCE);
+        PDGraphicsState graphicsState = getGraphicsState();
+        PDColor sColor = graphicsState.getStrokingColor();      
+        PDColor nsColor = graphicsState.getNonStrokingColor();
 
-                if (separation.getColorantName().equals("All")) {
-                    return true;
-                }
-            }
-
-            if (colorSpace instanceof PDDeviceCMYK) {
-                for (float c : components) {
-                    if (c > 0) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            if (colorSpace instanceof PDDeviceN) {
-                PDDeviceN deviceN = (PDDeviceN)colorSpace;
-            }
-
-            if (colorSpace instanceof PDIndexed) {
-                PDIndexed indexed = (PDIndexed)colorSpace;
-                PDColorSpace base = indexed.getBaseColorSpace();
-            }
-
-            if (colorSpace instanceof PDDeviceGray) {
-                if (components[0] == 0) {
-                    return true;
-                }
-            }
-
-            if (colorSpace instanceof PDDeviceRGB) {
-                for (float c : components) {
-                    if (c < 1) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-            
-            return false;
+        if (sColor.getColorSpace() != colorSpace && !isRegistrationColor(sColor))  {
+            graphicsState.setStrokingColor(white);
         }
 
-        return true;        
+        if (nsColor.getColorSpace() != colorSpace && !isRegistrationColor(nsColor)) {
+            graphicsState.setNonStrokingColor(white);
+        }
+    }
+
+    private boolean isRegistrationColor(PDColor color) {
+        PDColorSpace colorSpace = color.getColorSpace();
+
+        if (colorSpace instanceof PDSeparation) {
+            PDSeparation separation = (PDSeparation)colorSpace;
+
+            if (separation.getColorantName().equals("All")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean shouldDraw(PDColor color) {
+        if (colorSpace == null) {
+            return true;
+        }
+
+        PDColorSpace cs = color.getColorSpace();
+        boolean isOverprint = getGraphicsState().isOverprint() || getGraphicsState().isNonStrokingOverprint();
+
+        if (isOverprint && colorSpace != cs && !isRegistrationColor(color)) {
+            return false;
+        }
+        
+        return true;
     }
 }
