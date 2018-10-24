@@ -150,7 +150,9 @@ public class PDDeviceCMYK extends PDDeviceColorSpace
     @Override
     protected BufferedImage toRGBImageAWT(WritableRaster raster, ColorSpace colorSpace, PDColorSpace targetColorSpace)
     {
-        if (true || usePureJavaCMYKConversion)
+        boolean skipColorSpace = targetColorSpace != null && targetColorSpace != this;
+
+        if (usePureJavaCMYKConversion || skipColorSpace)
         {
             BufferedImage dest = new BufferedImage(raster.getWidth(), raster.getHeight(),
                     BufferedImage.TYPE_INT_RGB);
@@ -167,7 +169,7 @@ public class PDDeviceCMYK extends PDDeviceColorSpace
             {
                 for (int y = startY; y < height + startY; y++)
                 {
-                    if (targetColorSpace != null && targetColorSpace != this) {
+                    if (skipColorSpace) {
                         destRaster.setPixel(x, y, new int[] {255, 255, 255});
 
                         continue;
