@@ -142,7 +142,7 @@ final class SampledImageReader
      */
     public static BufferedImage getRGBImage(PDImage pdImage, COSArray colorKey) throws IOException
     {
-        return getRGBImage(pdImage, null, 1, colorKey, null);
+        return getRGBImage(pdImage, null, 1, colorKey, null, -1);
     }
 
     private static Rectangle clipRegion(PDImage pdImage, Rectangle region)
@@ -175,7 +175,7 @@ final class SampledImageReader
      * @throws IOException if the image cannot be read
      */
     public static BufferedImage getRGBImage(PDImage pdImage, Rectangle region, int subsampling,
-                                            COSArray colorKey, PDColorSpace targetColorSpace) throws IOException
+                                            COSArray colorKey, PDColorSpace targetColorSpace, int component) throws IOException
     {
         if (pdImage.isEmpty())
         {
@@ -198,7 +198,7 @@ final class SampledImageReader
 
         if (bitsPerComponent == 1 && colorKey == null && numComponents == 1)
         {
-            return from1Bit(pdImage, clipped, subsampling, width, height, targetColorSpace);
+            return from1Bit(pdImage, clipped, subsampling, width, height, targetColorSpace, component);
         }
 
         //
@@ -213,13 +213,13 @@ final class SampledImageReader
         if (bitsPerComponent == 8 && Arrays.equals(decode, defaultDecode) && colorKey == null)
         {
             // convert image, faster path for non-decoded, non-colormasked 8-bit images
-            return from8bit(pdImage, raster, clipped, subsampling, width, height, targetColorSpace);
+            return from8bit(pdImage, raster, clipped, subsampling, width, height, targetColorSpace, component);
         }
-        return fromAny(pdImage, raster, colorKey, clipped, subsampling, width, height, targetColorSpace);
+        return fromAny(pdImage, raster, colorKey, clipped, subsampling, width, height, targetColorSpace, component);
     }
 
     private static BufferedImage from1Bit(PDImage pdImage, Rectangle clipped, final int subsampling,
-                                          final int width, final int height, PDColorSpace targetColorSpace) throws IOException
+                                          final int width, final int height, PDColorSpace targetColorSpace, int component) throws IOException
     {
         int currentSubsampling = subsampling;
         final PDColorSpace colorSpace = pdImage.getColorSpace();
@@ -333,13 +333,13 @@ final class SampledImageReader
             }
 
             // use the color space to convert the image to RGB
-            return colorSpace.toRGBImage(raster, targetColorSpace);
+            return colorSpace.toRGBImage(raster, targetColorSpace, component);
         }
     }
 
     // faster, 8-bit non-decoded, non-colormasked image conversion
     private static BufferedImage from8bit(PDImage pdImage, WritableRaster raster, Rectangle clipped, final int subsampling,
-                                          final int width, final int height, PDColorSpace targetColorSpace) throws IOException
+                                          final int width, final int height, PDColorSpace targetColorSpace, int component) throws IOException
     {
         int currentSubsampling = subsampling;
         DecodeOptions options = new DecodeOptions(currentSubsampling);
@@ -381,7 +381,7 @@ final class SampledImageReader
                 {
                     LOG.debug("Tried reading " + width * height * (long) numComponents + " bytes but only " + inputResult + " bytes read");
                 }
-                return pdImage.getColorSpace().toRGBImage(raster, targetColorSpace);
+                return pdImage.getColorSpace().toRGBImage(raster, targetColorSpace, component);
             }
 
             // either subsampling is required, or reading only part of the image, so its
@@ -424,13 +424,13 @@ final class SampledImageReader
                 }
             }
             // use the color space to convert the image to RGB
-            return pdImage.getColorSpace().toRGBImage(raster, targetColorSpace);
+            return pdImage.getColorSpace().toRGBImage(raster, targetColorSpace, component);
         }
     }
 
     // slower, general-purpose image conversion from any image format
     private static BufferedImage fromAny(PDImage pdImage, WritableRaster raster, COSArray colorKey, Rectangle clipped,
-                                         final int subsampling, final int width, final int height, PDColorSpace targetColorSpace)
+                                         final int subsampling, final int width, final int height, PDColorSpace targetColorSpace, int component)
             throws IOException
     {
         int currentSubsampling = subsampling;
@@ -548,7 +548,7 @@ final class SampledImageReader
             }
 
             // use the color space to convert the image to RGB
-            BufferedImage rgbImage = colorSpace.toRGBImage(raster, targetColorSpace);
+            BufferedImage rgbImage = colorSpace.toRGBImage(raster, targetColorSpace, component);
 
             // apply color mask, if any
             if (colorKeyMask != null)

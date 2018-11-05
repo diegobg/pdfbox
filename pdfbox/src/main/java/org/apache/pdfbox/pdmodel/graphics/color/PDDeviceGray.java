@@ -70,7 +70,7 @@ public final class PDDeviceGray extends PDDeviceColorSpace
     }
 
     @Override
-    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
+    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace, int component) throws IOException
     {
         int width = raster.getWidth();
         int height = raster.getHeight();

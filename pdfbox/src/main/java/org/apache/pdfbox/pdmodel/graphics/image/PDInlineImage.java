@@ -350,9 +350,9 @@ public final class PDInlineImage implements PDImage
     }
 
     @Override
-    public BufferedImage getImage(Rectangle region, int subsampling, PDColorSpace targetColorSpace) throws IOException
+    public BufferedImage getImage(Rectangle region, int subsampling, PDColorSpace targetColorSpace, int component) throws IOException
     {
-        return SampledImageReader.getRGBImage(this, region, subsampling, null, targetColorSpace);
+        return SampledImageReader.getRGBImage(this, region, subsampling, null, targetColorSpace, component);
     }
 
     @Override

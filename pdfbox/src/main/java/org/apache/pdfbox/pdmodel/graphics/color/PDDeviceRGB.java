@@ -103,7 +103,7 @@ public final class PDDeviceRGB extends PDDeviceColorSpace
     }
 
     @Override
-    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace colorSpace) throws IOException
+    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace colorSpace, int component) throws IOException
     {
         init();
 

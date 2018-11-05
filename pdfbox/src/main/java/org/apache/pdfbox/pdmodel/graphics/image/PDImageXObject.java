@@ -397,14 +397,14 @@ public final class PDImageXObject extends PDXObject implements PDImage
     @Override
     public BufferedImage getImage() throws IOException
     {
-        return getImage(null, 1, null);
+        return getImage(null, 1, null, -1);
     }
     
     /**
      * {@inheritDoc}
      */
     @Override
-    public BufferedImage getImage(Rectangle region, int subsampling, PDColorSpace targetColorSpace) throws IOException
+    public BufferedImage getImage(Rectangle region, int subsampling, PDColorSpace targetColorSpace, int component) throws IOException
     {
         if (region == null && subsampling == cachedImageSubsampling && cachedImage != null && targetColorSpace == null)
         {
@@ -415,7 +415,7 @@ public final class PDImageXObject extends PDXObject implements PDImage
             }
         }
         // get image as RGB
-        BufferedImage image = SampledImageReader.getRGBImage(this, region, subsampling, getColorKeyMask(), targetColorSpace);
+        BufferedImage image = SampledImageReader.getRGBImage(this, region, subsampling, getColorKeyMask(), targetColorSpace, component);
 
         // soft mask (overrides explicit mask)
         PDImageXObject softMask = getSoftMask();

@@ -24,10 +24,8 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDResources;
-import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceCMYK;
 import org.apache.pdfbox.pdmodel.graphics.color.PDSeparation;
 import org.junit.Test;
@@ -47,29 +45,27 @@ public class TestSeparations {
         // Render Composite
         BufferedImage image = renderer.renderImage(0);
        
-        writeImage(image, OUTPUT_DIR + "/" + filename);
+        writeImage(image, OUTPUT_DIR + "/" + filename);        
 
         // Render CMYK
 
-        image = renderer.renderImage(0, PDDeviceCMYK.INSTANCE);
+        String[] processColors = new String[] { "Cyan", "Magenta", "Yellow", "Black" };
+
+        for(int i = 0; i < processColors.length; i++) {
+            image = renderer.renderImage(0, PDDeviceCMYK.INSTANCE, i);
        
-        writeImage(image, OUTPUT_DIR + "/" + filename + ".CMYK");
+            writeImage(image, OUTPUT_DIR + "/" + filename + "." + processColors[i] + ".pdf");
+        }
 
-        // Render separations
-        for (COSName name : resources.getColorSpaceNames()) {
-            PDColorSpace colorSpace = resources.getColorSpace(name);
-
-            if (colorSpace instanceof PDSeparation) {
-                PDSeparation separation = (PDSeparation)colorSpace;
-
-                if (separation.getColorantName().equals("All")) {
-                    continue;
-                }
-
-                image = renderer.renderImage(0, colorSpace);
-       
-                writeImage(image, OUTPUT_DIR + "/" + filename + "." + separation.getColorantName());
+        // // Render separations
+        for (PDSeparation separation : renderer.getSeparations()) {
+            if (separation.getColorantName().equals("All")) {
+                continue;
             }
+
+            image = renderer.renderImage(0, separation);
+   
+            writeImage(image, OUTPUT_DIR + "/" + filename + "." + separation.getColorantName());
         }
 
         document.close();

@@ -138,7 +138,7 @@ public final class PDIndexed extends PDSpecialColorSpace
         }
 
         // convert the base image to RGB
-        BufferedImage rgbImage = baseColorSpace.toRGBImage(baseRaster, null);
+        BufferedImage rgbImage = baseColorSpace.toRGBImage(baseRaster, null, -1);
         WritableRaster rgbRaster = rgbImage.getRaster();
 
         // build an RGB lookup table from the raster
@@ -176,7 +176,7 @@ public final class PDIndexed extends PDSpecialColorSpace
     // WARNING: this method is performance sensitive, modify with care!
     //
     @Override
-    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
+    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace, int component) throws IOException
     {
         // use lookup table
         int width = raster.getWidth();

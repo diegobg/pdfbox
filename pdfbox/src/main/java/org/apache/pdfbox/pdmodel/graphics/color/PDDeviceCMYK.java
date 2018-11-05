@@ -141,18 +141,18 @@ public class PDDeviceCMYK extends PDDeviceColorSpace
     }
 
     @Override
-    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
+    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace, int component) throws IOException
     {
         init();
-        return toRGBImageAWT(raster, awtColorSpace, targetColorSpace);
+        return toRGBImageAWT(raster, awtColorSpace, targetColorSpace, component);
     }
 
     @Override
-    protected BufferedImage toRGBImageAWT(WritableRaster raster, ColorSpace colorSpace, PDColorSpace targetColorSpace)
+    protected BufferedImage toRGBImageAWT(WritableRaster raster, ColorSpace colorSpace, PDColorSpace targetColorSpace, int component)
     {
         boolean skipColorSpace = targetColorSpace != null && targetColorSpace != this;
 
-        if (usePureJavaCMYKConversion || skipColorSpace)
+        if (usePureJavaCMYKConversion || skipColorSpace || component >= 0)
         {
             BufferedImage dest = new BufferedImage(raster.getWidth(), raster.getHeight(),
                     BufferedImage.TYPE_INT_RGB);
@@ -176,6 +176,15 @@ public class PDDeviceCMYK extends PDDeviceColorSpace
                     }
                     
                     raster.getPixel(x, y, srcValues);
+
+                    if (component >= 0) {
+                        for(int i = 0; i < srcValues.length; i++) {
+                            if (i != component) {
+                                srcValues[i] = 0;
+                            }
+                        }
+                    }
+
                     // check if the last value can be reused
                     if (!Arrays.equals(lastValues, srcValues))
                     {
@@ -198,7 +207,7 @@ public class PDDeviceCMYK extends PDDeviceColorSpace
         }
         else
         {
-            return super.toRGBImageAWT(raster, colorSpace, targetColorSpace);
+            return super.toRGBImageAWT(raster, colorSpace, targetColorSpace, component);
         }
     }
 }

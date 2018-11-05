@@ -171,22 +171,22 @@ public class PDDeviceN extends PDSpecialColorSpace
     }
 
     @Override
-    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
+    public BufferedImage toRGBImage(WritableRaster raster, PDColorSpace targetColorSpace, int component) throws IOException
     {
         if (attributes != null)
         {
-            return toRGBWithAttributes(raster, targetColorSpace);
+            return toRGBWithAttributes(raster, targetColorSpace, component);
         } 
         else
         {
-            return toRGBWithTintTransform(raster, targetColorSpace);
+            return toRGBWithTintTransform(raster, targetColorSpace, component);
         }
     }
 
     //
     // WARNING: this method is performance sensitive, modify with care!
     //
-    private BufferedImage toRGBWithAttributes(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
+    private BufferedImage toRGBWithAttributes(WritableRaster raster, PDColorSpace targetColorSpace, int component) throws IOException
     {
         int width = raster.getWidth();
         int height = raster.getHeight();
@@ -213,7 +213,7 @@ public class PDDeviceN extends PDSpecialColorSpace
             {
                 // TODO this happens in the Altona Visual test, is there a better workaround?
                 // missing spot color, fallback to using tintTransform
-                return toRGBWithTintTransform(raster, targetColorSpace);
+                return toRGBWithTintTransform(raster, targetColorSpace, component);
             }
             else
             {
@@ -249,7 +249,7 @@ public class PDDeviceN extends PDSpecialColorSpace
             }
 
             // convert single-component raster to RGB
-            BufferedImage rgbComponentImage = componentColorSpace.toRGBImage(componentRaster, null);
+            BufferedImage rgbComponentImage = componentColorSpace.toRGBImage(componentRaster, null, -1);
             WritableRaster rgbComponentRaster = rgbComponentImage.getRaster();
 
             // combine the RGB component with the RGB composite raster
@@ -284,7 +284,7 @@ public class PDDeviceN extends PDSpecialColorSpace
     //
     // WARNING: this method is performance sensitive, modify with care!
     //
-    private BufferedImage toRGBWithTintTransform(WritableRaster raster, PDColorSpace targetColorSpace) throws IOException
+    private BufferedImage toRGBWithTintTransform(WritableRaster raster, PDColorSpace targetColorSpace, int component) throws IOException
     {
         // cache color mappings
         Map<String, int[]> map1 = new HashMap<>();

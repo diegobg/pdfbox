@@ -42,14 +42,18 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -152,6 +156,8 @@ public class PageDrawer extends PDFGraphicsStreamEngine
 
     private final PDColorSpace colorSpace;
 
+    private final int component;
+
     /**
      * Constructor.
      *
@@ -164,6 +170,7 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         this.renderer = parameters.getRenderer();
         this.subsamplingAllowed = parameters.isSubsamplingAllowed();
         this.colorSpace = parameters.getColorSpace();
+        this.component = parameters.getComponent();
     }
 
     /**
@@ -985,12 +992,12 @@ public class PageDrawer extends PDFGraphicsStreamEngine
             {
                 int subsampling = getSubsampling(pdImage, at);
                 // draw the subsampled image
-                drawBufferedImage(pdImage.getImage(null, subsampling, colorSpace), at);
+                drawBufferedImage(pdImage.getImage(null, subsampling, colorSpace, component), at);
             }
             else
             {
                 // subsampling not allowed, draw the image
-                drawBufferedImage(pdImage.getImage(null, 1, colorSpace), at);
+                drawBufferedImage(pdImage.getImage(null, 1, colorSpace, component), at);
             }
         }
 
@@ -1216,12 +1223,17 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         super.showAnnotation(annotation);
     }
 
+    private int imageNumber = 0;
+
     @Override
     public void showTransparencyGroup(PDTransparencyGroup form) throws IOException
     {
         TransparencyGroup group =
                 new TransparencyGroup(form, false, getGraphicsState().getCurrentTransformationMatrix(), null);
         BufferedImage image = group.getImage();
+
+        //ImageIO.write(image, "jpg", new FileOutputStream("C:/Source/Repos/pdfbox/pdfbox/src/test/resources/output/rendering/transparency groups/" +  ++imageNumber + ".jpg"));
+
         if (image == null)
         {
             // image is empty, don't bother
@@ -1313,7 +1325,8 @@ public class PageDrawer extends PDFGraphicsStreamEngine
             Matrix transform = Matrix.concatenate(ctm, form.getMatrix());
 
             // transform the bbox
-            GeneralPath transformedBox = form.getBBox().transform(transform);
+            PDRectangle box = form.getBBox();
+            GeneralPath transformedBox = box.transform(transform);
 
             // clip the bbox to prevent giant bboxes from consuming all memory
             Area clip = (Area)getGraphicsState().getCurrentClippingPath().clone();
@@ -1355,6 +1368,10 @@ public class PageDrawer extends PDFGraphicsStreamEngine
             else
             {
                 image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g = image.createGraphics();
+                g.setColor(new Color(255, 255, 255, 255));
+                g.fillRect(0, 0, width, height);
+                g.dispose();
             }
 
             boolean needsBackdrop = !isSoftMask && !form.getGroup().isIsolated() &&
@@ -1586,21 +1603,57 @@ public class PageDrawer extends PDFGraphicsStreamEngine
     }
 
     private void CheckColors() {
-        if (colorSpace == null) {
-            return;
-        }    
-
         PDColor white = new PDColor(new float[] { 255, 255, 255}, PDDeviceRGB.INSTANCE);
         PDGraphicsState graphicsState = getGraphicsState();
-        PDColor sColor = graphicsState.getStrokingColor();      
+        PDColor sColor = graphicsState.getStrokingColor();
         PDColor nsColor = graphicsState.getNonStrokingColor();
+        PDColorSpace sColorSpace = sColor.getColorSpace();
+        PDColorSpace nsColorSpace = nsColor.getColorSpace();
 
-        if (sColor.getColorSpace() != colorSpace && !isRegistrationColor(sColor))  {
-            graphicsState.setStrokingColor(white);
+        if (colorSpace == null) {
+            if (sColorSpace instanceof PDSeparation) {
+                getRenderer().getSeparations().add((PDSeparation)sColorSpace);
+            }
+
+            if (nsColorSpace instanceof PDSeparation) {
+                getRenderer().getSeparations().add((PDSeparation)nsColorSpace);
+            }
+
+            return;
         }
 
-        if (nsColor.getColorSpace() != colorSpace && !isRegistrationColor(nsColor)) {
-            graphicsState.setNonStrokingColor(white);
+        if (!isRegistrationColor(sColor)) {
+            if (sColorSpace != colorSpace) {
+                graphicsState.setStrokingColor(white);
+            }
+            else if (component >= 0) {
+                float[] components = sColor.getComponents();
+                
+                for (int i = 0; i < components.length; i++) {
+                    if (i != component) {
+                        components[i] = 0;
+                    }
+                }
+
+                graphicsState.setStrokingColor(new PDColor(components, sColorSpace));
+            }
+        }
+
+        if (!isRegistrationColor(nsColor)) {
+            if (nsColorSpace != colorSpace) {
+                graphicsState.setNonStrokingColor(white);
+            }
+            else if (component >= 0) {
+                float[] components = nsColor.getComponents();
+                
+                for (int i = 0; i < components.length; i++) {
+                    if (i != component) {
+                        components[i] = 0;
+                    }
+                }
+
+                graphicsState.setNonStrokingColor(new PDColor(components, nsColorSpace));
+            }
         }
     }
 

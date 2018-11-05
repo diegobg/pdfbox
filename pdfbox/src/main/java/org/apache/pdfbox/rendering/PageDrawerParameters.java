@@ -33,16 +33,18 @@ public final class PageDrawerParameters
     private final PDPage page;
     private final boolean subsamplingAllowed;
     private final PDColorSpace colorSpace;
+    private final int component;
 
     /**
      * Package-private constructor.
      */
-    PageDrawerParameters(PDFRenderer renderer, PDPage page, boolean subsamplingAllowed, PDColorSpace colorSpace)
+    PageDrawerParameters(PDFRenderer renderer, PDPage page, boolean subsamplingAllowed, PDColorSpace colorSpace, int component)
     {
         this.renderer = renderer;
         this.page = page;
         this.subsamplingAllowed = subsamplingAllowed;
         this.colorSpace = colorSpace;
+        this.component = component;
     }
 
     /**
@@ -74,5 +76,9 @@ public final class PageDrawerParameters
      */
     public PDColorSpace getColorSpace() {
         return colorSpace;
+    }
+
+    public int getComponent() {
+        return component;
     }
 }
