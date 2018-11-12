@@ -42,18 +42,14 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
-
-import javax.imageio.ImageIO;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -154,7 +150,7 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         }
     };
 
-    private final PDColorSpace colorSpace;
+    private PDColorSpace colorSpace;
 
     private final int component;
 
@@ -1232,6 +1228,9 @@ public class PageDrawer extends PDFGraphicsStreamEngine
                 new TransparencyGroup(form, false, getGraphicsState().getCurrentTransformationMatrix(), null);
         BufferedImage image = group.getImage();
 
+        PDColorSpace cs = colorSpace;
+        colorSpace = null;
+
         //ImageIO.write(image, "jpg", new FileOutputStream("C:/Source/Repos/pdfbox/pdfbox/src/test/resources/output/rendering/transparency groups/" +  ++imageNumber + ".jpg"));
 
         if (image == null)
@@ -1254,7 +1253,7 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         
         AffineTransform transform = new AffineTransform(xform);
         transform.scale(1.0 / xScale, 1.0 / yScale);
-        graphics.setTransform(transform);
+        graphics.setTransform(transform);        
 
         // adjust bbox (x,y) position at the initial scale + cropbox
         float x = bbox.getLowerLeftX() - pageSize.getLowerLeftX();
@@ -1284,6 +1283,8 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         {
             graphics.drawImage(image, null, null);
         }
+
+        colorSpace = cs;
 
         graphics.setTransform(prev);
     }
