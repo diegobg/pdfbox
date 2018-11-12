@@ -42,6 +42,7 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1369,10 +1372,6 @@ public class PageDrawer extends PDFGraphicsStreamEngine
             else
             {
                 image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                Graphics2D g = image.createGraphics();
-                g.setColor(new Color(255, 255, 255, 255));
-                g.fillRect(0, 0, width, height);
-                g.dispose();
             }
 
             boolean needsBackdrop = !isSoftMask && !form.getGroup().isIsolated() &&
