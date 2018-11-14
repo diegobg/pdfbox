@@ -183,8 +183,13 @@ public class PDFormXObject extends PDXObject implements PDContentStream
         PDRectangle retval = null;
         COSArray array = (COSArray) getCOSObject().getDictionaryObject(COSName.BBOX);
         if (array != null)
-        {
+        {            
             retval = new PDRectangle(array);
+
+            retval.setLowerLeftX((float)Math.floor(retval.getLowerLeftX()) - 1);
+            retval.setLowerLeftY((float)Math.floor(retval.getLowerLeftY()) - 1);
+            retval.setUpperRightX((float)Math.ceil(retval.getUpperRightX()) + 1);
+            retval.setUpperRightY((float)Math.ceil(retval.getUpperRightY()) + 1);
         }
         return retval;
     }
