@@ -42,7 +42,6 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,8 +50,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
-
-import javax.imageio.ImageIO;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -516,26 +513,33 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         linePath.closePath();
     }
 
+    private Paint applySoftMaskToPaint(Paint parentPaint, PDSoftMask softMask) throws IOException {
+        return applySoftMaskToPaint(parentPaint, softMask, 0, 0);
+    }
+
     //TODO: move soft mask apply to getPaint()?
-    private Paint applySoftMaskToPaint(Paint parentPaint, PDSoftMask softMask) throws IOException
+    private Paint applySoftMaskToPaint(Paint parentPaint, PDSoftMask softMask, float x, float y) throws IOException
     {
         if (softMask == null || softMask.getGroup() == null)
         {
             return parentPaint;
         }
+
+        PDTransparencyGroup group = softMask.getGroup();
         PDColor backdropColor = null;
         if (COSName.LUMINOSITY.equals(softMask.getSubType()))
         {
             COSArray backdropColorArray = softMask.getBackdropColor();
-            PDColorSpace colorSpace = softMask.getGroup().getGroup().getColorSpace();
+            PDColorSpace colorSpace = group.getGroup().getColorSpace();
             if (colorSpace != null && backdropColorArray != null)
             {
                 backdropColor = new PDColor(backdropColorArray, colorSpace);
             }
         }
-        TransparencyGroup transparencyGroup = new TransparencyGroup(softMask.getGroup(), true, 
-                softMask.getInitialTransformationMatrix(), backdropColor);
+        TransparencyGroup transparencyGroup = new TransparencyGroup(group, true, 
+                softMask.getInitialTransformationMatrix(), backdropColor);               
         BufferedImage image = transparencyGroup.getImage();
+
         if (image == null)
         {
             // Adobe Reader ignores empty softmasks instead of using bc color
@@ -557,10 +561,12 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         {
             throw new IOException("Invalid soft mask subtype.");
         }
+
         gray = adjustImage(gray);
-        
+       
         Rectangle2D tpgBounds = transparencyGroup.getBounds();
-        adjustRectangle(tpgBounds);
+        adjustRectangle(tpgBounds, x, y);
+
         return new SoftMask(parentPaint, gray, tpgBounds, backdropColor, softMask.getTransferFunction());
     }
 
@@ -570,7 +576,7 @@ public class PageDrawer extends PDFGraphicsStreamEngine
     // 2. change transparencyGroup.getBounds() to getOrigin(), because size isn't used in SoftMask
     // 3. Is it possible to create the softmask and transparency group in the correct rotation?
     //    (needs rendering identity testing before committing!)
-    private void adjustRectangle(Rectangle2D r)
+    private void adjustRectangle(Rectangle2D r, float x, float y)
     {
         Matrix m = new Matrix(xform);
         double scaleX = m.getScalingFactorX();
@@ -578,6 +584,7 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         
         AffineTransform adjustedTransform = new AffineTransform(xform);
         adjustedTransform.scale(1.0 / scaleX, 1.0 / scaleY);
+        adjustedTransform.translate(Math.round(-x), Math.round(-y));
         r.setRect(adjustedTransform.createTransformedShape(r).getBounds2D());
     }
 
@@ -1222,7 +1229,6 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         super.showAnnotation(annotation);
     }
 
-    private int imageNumber = 0;
 
     @Override
     public void showTransparencyGroup(PDTransparencyGroup form) throws IOException
@@ -1233,8 +1239,6 @@ public class PageDrawer extends PDFGraphicsStreamEngine
 
         PDColorSpace cs = colorSpace;
         colorSpace = null;
-
-        //ImageIO.write(image, "jpg", new FileOutputStream("C:/Source/Repos/pdfbox/pdfbox/src/test/resources/output/rendering/transparency groups/" +  ++imageNumber + ".jpg"));
 
         if (image == null)
         {
@@ -1275,15 +1279,25 @@ public class PageDrawer extends PDFGraphicsStreamEngine
         PDSoftMask softMask = getGraphicsState().getSoftMask();
         if (softMask != null)
         {
-            Paint awtPaint = new TexturePaint(image,
-                    new Rectangle2D.Float(0, 0, image.getWidth(), image.getHeight()));
-            awtPaint = applySoftMaskToPaint(awtPaint, softMask);
-            graphics.setPaint(awtPaint);
-            graphics.fill(
-                    new Rectangle2D.Float(0, 0, bbox.getWidth() * xScale, bbox.getHeight() * yScale));
+            BufferedImage img = new BufferedImage((int)(bbox.getWidth() * xScale), (int)(bbox.getHeight() * yScale), BufferedImage.TYPE_INT_ARGB);
+            Paint awtPaint = new TexturePaint(image, new Rectangle2D.Float(0, 0, image.getWidth(), image.getHeight()));
+            Graphics2D g = img.createGraphics();
+            awtPaint = applySoftMaskToPaint(awtPaint, softMask, x * xScale, y * yScale);
+            try {
+                g.setPaint(awtPaint);
+                g.fill(
+                    new Rectangle2D.Float(0, 0, img.getWidth(), img.getHeight())
+                );
+            }
+            finally {
+                g.dispose();
+            }
+            
+            graphics.drawImage(img, null, null);
         }
         else
         {
+            graphics.translate(0, 0);
             graphics.drawImage(image, null, null);
         }
 
@@ -1400,6 +1414,7 @@ public class PageDrawer extends PDFGraphicsStreamEngine
             }
 
             Graphics2D g = image.createGraphics();
+
             if (needsBackdrop)
             {
                 // backdropImage must be included in group image but not in group alpha.

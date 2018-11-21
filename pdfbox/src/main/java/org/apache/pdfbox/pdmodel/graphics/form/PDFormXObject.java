@@ -186,10 +186,10 @@ public class PDFormXObject extends PDXObject implements PDContentStream
         {            
             retval = new PDRectangle(array);
 
-            retval.setLowerLeftX((float)Math.floor(retval.getLowerLeftX()) - 1);
-            retval.setLowerLeftY((float)Math.floor(retval.getLowerLeftY()) - 1);
-            retval.setUpperRightX((float)Math.ceil(retval.getUpperRightX()) + 1);
-            retval.setUpperRightY((float)Math.ceil(retval.getUpperRightY()) + 1);
+            retval.setLowerLeftX((float)Math.floor(retval.getLowerLeftX()) - 20);
+            retval.setLowerLeftY((float)Math.floor(retval.getLowerLeftY()) - 20);
+            retval.setUpperRightX((float)Math.ceil(retval.getUpperRightX()) + 20);
+            retval.setUpperRightY((float)Math.ceil(retval.getUpperRightY()) + 20);
         }
         return retval;
     }
